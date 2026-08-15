@@ -1,0 +1,70 @@
+{
+  "General": {
+    "Drive": 1,
+    "Mass": 200,
+    "Front Weight Distribution": 50,
+    "Left Weight Distribution": 50,
+    "Wheelbase": 1.53,
+    "Front Track Width": 1.238,
+    "Rear Track Width": 1.15,
+    "CG Height": 0.330,
+    "Steering Ratio": 3.74,
+    "Vehicle Roll Inertia": 15,
+    "Vehicle Pitch Inertia": 60,
+    "Vehicle Yaw Inertia": 80,
+    "Front Axle To Pitch Center": 0.931
+  },
+
+  "Aero": {
+    "Total Downforce Coefficient": 4.5,
+    "Front Aero Balance": 45,
+    "Total Drag Coefficient": -1.75,
+    "Frontal Area": 1.0,
+    "Air Density": 1.225,
+    "Static Front Ride Height": 0.035,
+    "Static Rear Ride Height": 0.045
+  },
+
+  "Tires": {
+    "Tire Rolling Radius": 0.199,
+    "Rolling Resistance Coefficient": -0.03,
+    "Longitudinal Friction Coefficient": 1.2,
+    "Lateral Friction Coefficient": 1.45,
+    "Longitudinal Friction Normal Load Rating": 50,
+    "Lateral Friction Normal Load Rating": 50,
+    "Longitudinal Friction Sensitivity": 10e-4,
+    "Lateral Friction Sensitivity": 10e-4,
+    "Front Cornering Stiffness": 190,
+    "Rear Cornering Stiffness": 190
+  },
+
+  "Suspension": {
+    "Front Roll Center Height": 0.0,
+    "Rear Roll Center Height": 0.0,
+    "Front Wheel/Spring Motion Ratio": 1.08,
+    "Rear Wheel/Spring Motion Ratio": 1.08,
+    "Front Spring Stiffness": 350,
+    "Rear Spring Stiffness": 150,
+    "Front Tire Stiffness": 95e+3,
+    "Rear Tire Stiffness": 95e+3,
+    "Front ARB Stiffness": 36450,
+    "Rear ARB Stiffness": 115710,
+    "Front Wheel/ARB Motion Ratio": 1.07,
+    "Rear Wheel/ARB Motion Ratio": 1.56
+  },
+
+  "Powertrain": {
+  "Idle Clutch Disengaged RPM": 2500,
+  "Engine Thermal Efficiency": 30,
+  "Fuel Lower Heating Value": 43.5e+6,
+  "Drivetrain Efficiency": 90,
+  "Primary Gear Ratio": 2.111,
+  "Final Drive Ratio": 3.8181,
+  "1 Gear Ratio": 2.75,
+  "2 Gear Ratio": 2.0,
+  "3 Gear Ratio": 1.67,
+  "4 Gear Ratio": 1.44,
+  "5 Gear Ratio": 1.30434,
+  "6 Gear Ratio": 1.2083
+  }
+}
