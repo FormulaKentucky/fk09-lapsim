@@ -1,39 +1,29 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.interpolate import CubicSpline
 from scipy.integrate import cumulative_trapezoid
-from matplotlib import pyplot as plt
+from scipy.optimize import least_squares
 
-def track_model(file_name):
-    # This function interpolates and smoothes the track data (if window > 1)
+def track_model(file_name, curvature_threshold):
     def interp(xy, L, dL, window):
-        # Split up the data and ensure the first and last positions are the same
         x = np.append(xy.loc[:,"x"].values, xy.loc[0,"x"])
         y = np.append(xy.loc[:,"y"].values, xy.loc[0,"y"])
-        
-        # Match the length array
         L = np.append(L, L[-1] + np.sqrt((x[-1]-x[-2])**2 + (y[-1]-y[-2])**2))
-    
         
-        # Make the spline functions
         xs = CubicSpline(L, x, bc_type='periodic')
         ys = CubicSpline(L, y, bc_type='periodic')
         
-        # Get the first derivatives for each spline 
         xs_first = xs.derivative()
         ys_first = ys.derivative()
         
-        # Define the parametric curve and interpolate L to its grid
         L_fine = np.linspace(L[0], L[-1], int(1e+4))
         S_fine = cumulative_trapezoid(np.sqrt(xs_first(L_fine)**2 + ys_first(L_fine)**2), L_fine)
         S_fine = np.insert(S_fine, 0, 0)
         Ls = CubicSpline(S_fine, L_fine, bc_type='natural')
         
-        # Compute the new length grid
         S_new = np.arange(0, S_fine[-1], dL)
         L_new = Ls(S_new)
         
-        # Compute the radii for the curve
         xs_second = xs_first.derivative()
         ys_second = ys_first.derivative()
         
@@ -42,29 +32,58 @@ def track_model(file_name):
         d2x_dL2 = xs_second(L_new)
         d2y_dL2 = ys_second(L_new)
         
-        radii = (dx_dL**2 + dy_dL**2)**(3/2) / np.abs(dx_dL * d2y_dL2 - dy_dL * d2x_dL2)
+        curvature = (dx_dL * d2y_dL2 - dy_dL * d2x_dL2) / (dx_dL**2 + dy_dL**2)**(3/2)
+        radii = 1 / np.abs(curvature)
         
-        x_new = xs(L_new)
-        y_new = ys(L_new)
-        xy_new = pd.DataFrame([x_new,y_new]).T.rolling(window=window,min_periods=1).mean()
-        xy_new.columns = ["x", "y"]
-        return xy_new, L_new, radii
+        if window > 1:
+            x_new = pd.Series(xs(L_new)).rolling(window=window, min_periods=1).mean().values
+            y_new = pd.Series(ys(L_new)).rolling(window=window, min_periods=1).mean().values
+        else:
+            x_new = xs(L_new)
+            y_new = ys(L_new)
+        
+        xy_new = pd.DataFrame({"x": x_new, "y": y_new})
+        return xy_new, L_new, radii, curvature
     
-    # Read in the track data then split up x and y positions
+    def deinterpolate(xy_new, L_new, L_original):
+        xs = CubicSpline(L_new, xy_new.loc[:,"x"].values)
+        ys = CubicSpline(L_new, xy_new.loc[:,"y"].values)
+        x_orig = xs(L_original)
+        y_orig = ys(L_original)
+        return pd.DataFrame({"x": x_orig, "y": y_orig})
+    
+    def residual(params, xy_original, L_original):
+        dL, window = params
+        xy_new, L_new, _, curvature = interp(xy_original, L_original, dL, max(1, int(window)))
+        
+        xy_deinterp = deinterpolate(xy_new, L_new, L_original)
+        res = np.sqrt((xy_deinterp["x"].values - xy_original["x"].values)**2 + 
+                      (xy_deinterp["y"].values - xy_original["y"].values)**2)
+        
+        curvature_fft = np.fft.fft(curvature)
+        freq_amplitude = np.abs(curvature_fft)
+        
+        low_amp_mask = freq_amplitude < curvature_threshold
+        penalty = np.zeros_like(freq_amplitude)
+        penalty[low_amp_mask] = 1e+16 / np.exp(freq_amplitude[low_amp_mask])
+        
+        penalty_time = np.real(np.fft.ifft(penalty))
+        res = res + penalty_time[:len(res)]
+        
+        return res
+    
     track_raw = pd.read_csv(file_name, sep="\t")
-    xy = track_raw.loc[:,("x","y")]
-    
-    # Get the track length values
+    xy_OG = track_raw.loc[:,("x","y")]
     L = track_raw.loc[:,"dist"].values
     
-    # Do a couple of iterations on this (maybe find a way to best fit?)
-    xy, L, _ = interp(xy, L, 0.5, 30)
-    xy, L, _ = interp(xy, L, 0.2, 50)
-    return interp(xy, L, 0.1, 1) # Final window should always be 1 for correct dL
+    result = least_squares(residual, [0.5, 30.0], args=(xy_OG, L), 
+                           bounds=([0.05, 1.0], [2.0, 100.0]))
     
+    dL_opt, window_opt = result.x
+    xy_new, L_new, radii, _ = interp(xy_OG, L, dL_opt, max(1, int(window_opt)))
+    xy_final, L_final, radii_final, _ = interp(xy_new, L_new, 0.01, 1)
     
-    
-xy, L, radii = track_model("data/11-22-25 AutoX.txt")
+    return xy_final, L_final, radii_final, xy_OG
     
     
     
